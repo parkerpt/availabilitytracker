@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meet2Gether — Scheduling, Reimagined</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --surface: #18181b;
+    --surface2: #232328;
+    --border: #2e2e35;
+    --text: #f0eff4;
+    --muted: #8b8b99;
+    --accent: #e8c547;
+    --virtual: #5b9cf6;
+    --inperson: #52c98f;
+    --both: #9b7fe8;
+    --none: #2a2a30;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2.5rem; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(14,14,15,0.88); backdrop-filter: blur(16px); z-index: 100;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.5rem; letter-spacing: -0.02em; cursor: pointer; }
+  .logo span { color: var(--accent); }
+  .nav-right { display: flex; align-items: center; gap: 0.75rem; }
+  .nav-badge { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); border: 1px solid var(--border); padding: 0.25rem 0.75rem; border-radius: 100px; }
+
+  .view { display: none; }
+  .view.active { display: block; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── HOME ── */
+  #view-home { max-width: 680px; margin: 0 auto; padding: 5rem 2rem 3rem; text-align: center; }
+  .hero-eyebrow { font-family: 'DM Mono', monospace; font-size: 0.75rem; letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; margin-bottom: 1.5rem; }
+  .hero-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.08; letter-spacing: -0.03em; margin-bottom: 1.25rem; }
+  .hero-title em { font-style: italic; color: var(--accent); }
+  .hero-sub { color: var(--muted); font-size: 1.05rem; line-height: 1.65; max-width: 460px; margin: 0 auto 2.5rem; }
+
+  .legend-inline { display: flex; justify-content: center; gap: 1.25rem; margin-bottom: 2.5rem; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; color: var(--muted); }
+  .legend-dot { width: 13px; height: 13px; border-radius: 4px; flex-shrink: 0; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; margin-bottom: 1.25rem; text-align: left; }
+  .card-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+  .card-title .num { width: 26px; height: 26px; background: var(--accent); color: #000; border-radius: 50%; font-family: 'DM Mono', monospace; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  input[type=text], input[type=date], select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.7rem 1rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    outline: none; transition: border-color 0.2s; margin-bottom: 1rem; appearance: none;
+  }
+  input[type=text]:focus, input[type=date]:focus, select:focus { border-color: var(--accent); }
+  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .hour-row { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+  .hour-row select { margin-bottom: 0; flex: 1; font-family: 'DM Mono', monospace; font-size: 0.88rem; cursor: pointer; }
+  .hour-sep { color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .btn-primary { width: 100%; background: var(--accent); color: #000; border: none; border-radius: 10px; padding: 0.85rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
+  .btn-primary:hover { transform: translateY(-1px); opacity: 0.9; }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 0.5rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+  .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .divider span { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+
+  .join-row { display: flex; gap: 0.75rem; align-items: center; }
+  .join-row input { flex: 1; margin-bottom: 0; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; font-size: 1rem; }
+  .join-row .btn-primary { width: auto; white-space: nowrap; padding: 0.7rem 1.4rem; margin: 0; }
+
+  /* ── EVENT VIEW ── */
+  #view-event { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
+  .event-header { margin-bottom: 1.5rem; }
+  .event-title { font-family: 'DM Serif Display', serif; font-size: 2rem; letter-spacing: -0.02em; margin-bottom: 0.2rem; }
+  .event-meta { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--muted); }
+
+  .share-bar { display: flex; gap: 0.75rem; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.65rem 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .share-label { font-size: 0.72rem; color: var(--muted); white-space: nowrap; font-family: 'DM Mono', monospace; }
+  .share-id { font-family: 'DM Mono', monospace; font-size: 1rem; color: var(--accent); font-weight: 600; letter-spacing: 0.12em; }
+  .copy-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.28rem 0.7rem; font-size: 0.75rem; cursor: pointer; font-family: 'DM Mono', monospace; transition: color 0.15s; white-space: nowrap; }
+  .copy-btn:hover { color: var(--text); }
+  .share-hint { font-size: 0.76rem; color: var(--muted); flex: 1; }
+
+  .event-layout { display: grid; grid-template-columns: 270px 1fr; gap: 2rem; align-items: start; }
+  @media (max-width: 700px) { .event-layout { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr; } }
+
+  .sidebar .card { padding: 1.4rem; }
+  .tabs { display: flex; gap: 0.2rem; background: var(--surface2); border-radius: 9px; padding: 0.2rem; margin-bottom: 1.1rem; }
+  .tab { flex: 1; text-align: center; padding: 0.45rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--text); font-weight: 600; }
+
+  .mode-select { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-bottom: 0.9rem; }
+  .mode-btn { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.65rem 0.4rem; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 0.72rem; color: var(--muted); transition: all 0.15s; text-align: center; }
+  .mode-btn .mode-icon { font-size: 1.2rem; }
+  .mode-btn.active-virtual { border-color: var(--virtual); color: var(--virtual); background: rgba(91,156,246,0.09); }
+  .mode-btn.active-inperson { border-color: var(--inperson); color: var(--inperson); background: rgba(82,201,143,0.09); }
+  .mode-btn.active-both { border-color: var(--both); color: var(--both); background: rgba(155,127,232,0.09); }
+
+  .paint-hint { font-size: 0.76rem; color: var(--muted); line-height: 1.5; padding: 0.65rem 0.75rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.9rem; }
+  .sub-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.65rem; font-weight: 600; }
+
+  .respondents-list { margin-top: 0.25rem; }
+  .respondent-tag { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; }
+  .respondent-tag:last-child { border-bottom: none; }
+  .respondent-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; transition: box-shadow 0.15s; }
+  .respondent-tag.highlighted .respondent-dot { box-shadow: 0 0 0 3px rgba(232,197,71,0.3); }
+  .r-name { flex: 1; }
+  .r-modes { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+
+  .legend-bar { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .legend-bar .legend-item { font-size: 0.76rem; }
+
+  .saving-indicator { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 0.5rem; min-height: 1.2em; }
+
+  /* ── GRID ── */
+  .grid-wrap { overflow-x: auto; }
+  .avail-grid { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); user-select: none; display: inline-flex; flex-direction: column; min-width: 100%; }
+  .grid-header { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .time-col-header { width: 60px; flex-shrink: 0; border-right: 1px solid var(--border); }
+  .day-header { flex: 1; text-align: center; padding: 0.7rem 0.2rem; min-width: 76px; }
+  .day-header .day-name { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .day-header .day-num { font-family: 'DM Serif Display', serif; font-size: 1.2rem; line-height: 1; margin-top: 0.1rem; }
+  .grid-body { display: flex; }
+  .time-col { width: 60px; flex-shrink: 0; border-right: 1px solid var(--border); }
+  .time-label { height: 38px; display: flex; align-items: center; justify-content: flex-end; padding-right: 9px; font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .day-col { flex: 1; min-width: 76px; border-right: 1px solid var(--border); }
+  .day-col:last-child { border-right: none; }
+  .cell { height: 38px; border-bottom: 1px solid var(--border); cursor: crosshair; position: relative; background: var(--none); transition: filter 0.05s; }
+  .cell.half-hour { border-bottom: 1px dashed rgba(255,255,255,0.04); }
+  .cell:last-child { border-bottom: none; }
+  .cell:hover { filter: brightness(1.18); }
+  .cell[data-mode="virtual"]  { background: var(--virtual); }
+  .cell[data-mode="inperson"] { background: var(--inperson); }
+  .cell[data-mode="both"]     { background: var(--both); }
+  .heat-layer { position: absolute; inset: 0; pointer-events: none; }
+
+  /* ── TOOLTIP ── */
+  #tooltip { position: fixed; background: #1b1b21; border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.85rem; font-size: 0.78rem; pointer-events: none; z-index: 1000; display: none; max-width: 210px; box-shadow: 0 8px 28px rgba(0,0,0,0.55); }
+  #tooltip .tt-time { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--accent); margin-bottom: 0.3rem; }
+  #tooltip .tt-row { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.22rem; }
+  #tooltip .tt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── TOAST ── */
+  #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.65rem 1.25rem; font-size: 0.85rem; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 200; white-space: nowrap; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 0.35rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state { text-align: center; padding: 1.5rem 1rem; color: var(--muted); font-size: 0.85rem; }
+  .empty-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+  .best-overlap-card { background: var(--surface2); border-radius: 10px; padding: 0.75rem; font-size: 0.82rem; line-height: 1.7; }
+
+  .pulse { animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo" onclick="showHome()">Meet<span>2</span>Gether</div>
+  <div class="nav-right">
+    <div class="nav-badge" id="sync-badge">● Live sync</div>
+  </div>
+</nav>
+
+<div id="tooltip"></div>
+<div id="toast"></div>
+
+<!-- ── HOME ── -->
+<div id="view-home" class="view active">
+  <div class="hero-eyebrow">Scheduling for hybrid teams</div>
+  <h1 class="hero-title">Find when everyone's<br><em>actually</em> free</h1>
+  <p class="hero-sub">Create an event, share the code — teammates join and mark whether they're available virtually, in-person, or either.</p>
+
+  <div class="legend-inline">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--virtual)"></div>Virtual only</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--inperson)"></div>In-person only</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--both)"></div>Either works</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--none);border:1px solid var(--border)"></div>Unavailable</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="num">1</div>Name your event</div>
+    <label>Event name</label>
+    <input type="text" id="event-name" placeholder="Team sync, project kickoff, lunch…" />
+
+    <div class="card-title"><div class="num">2</div>Pick your dates</div>
+    <div class="row">
+      <div><label>From</label><input type="date" id="date-from" /></div>
+      <div><label>To</label><input type="date" id="date-to" /></div>
+    </div>
+
+    <label>Time range</label>
+    <div class="hour-row">
+      <select id="hour-start"></select>
+      <span class="hour-sep">→</span>
+      <select id="hour-end"></select>
+    </div>
+
+    <button class="btn-primary" id="create-btn" onclick="createNewEvent()">Create event →</button>
+  </div>
+
+  <div class="divider"><span>or join an existing one</span></div>
+
+  <div class="card">
+    <label>Event code</label>
+    <div class="join-row">
+      <input type="text" id="join-code" placeholder="ABC-1234" maxlength="8" oninput="this.value=this.value.replace(/[^A-Za-z0-9-]/g,'').toUpperCase()" onkeydown="if(event.key==='Enter')joinEvent()" />
+      <button class="btn-primary" onclick="joinEvent()">Join →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── EVENT ── -->
+<div id="view-event" class="view">
+  <div class="event-header">
+    <div class="event-title" id="ev-title"></div>
+    <div class="event-meta" id="ev-meta"></div>
+  </div>
+
+  <div class="share-bar">
+    <span class="share-label">Event code:</span>
+    <span class="share-id" id="share-id"></span>
+    <button class="copy-btn" onclick="copyCode()">Copy</button>
+    <span class="share-hint">Share this code so others can join and add their availability</span>
+    <button class="btn-ghost" onclick="showHome()">New event</button>
+  </div>
+
+  <div class="event-layout">
+    <div class="sidebar">
+      <div class="card">
+        <div class="tabs">
+          <div class="tab active" id="tab-add-btn" onclick="switchTab('add')">Add mine</div>
+          <div class="tab" id="tab-view-btn" onclick="switchTab('view')">View all</div>
+        </div>
+
+        <div id="tab-add">
+          <label>Your name</label>
+          <input type="text" id="responder-name" placeholder="Jane Smith" style="margin-bottom:0.9rem" />
+
+          <div class="sub-title">Availability type to paint</div>
+          <div class="mode-select">
+            <div class="mode-btn active-virtual" id="modeBtn-virtual" onclick="selectMode('virtual')">
+              <span class="mode-icon">💻</span>Virtual
+            </div>
+            <div class="mode-btn" id="modeBtn-inperson" onclick="selectMode('inperson')">
+              <span class="mode-icon">🏢</span>In-Person
+            </div>
+            <div class="mode-btn" id="modeBtn-both" onclick="selectMode('both')" style="grid-column:1/-1">
+              <span class="mode-icon">✨</span>Either works
+            </div>
+          </div>
+
+          <div class="paint-hint">Click &amp; drag on the calendar to paint availability. Right-click or drag over a filled cell to erase.</div>
+
+          <button class="btn-primary" id="save-btn" onclick="submitAvailability()">Save my availability</button>
+          <div class="saving-indicator" id="saving-indicator"></div>
+        </div>
+
+        <div id="tab-view" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.65rem">
+            <div class="sub-title" style="margin-bottom:0">Respondents</div>
+            <button class="copy-btn" onclick="refreshAll()" style="font-size:0.7rem">↻ Refresh</button>
+          </div>
+          <div id="respondents-list" class="respondents-list">
+            <div class="empty-state"><div class="empty-icon">🌱</div>No responses yet</div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <div class="sub-title">Best overlap</div>
+            <div id="best-overlap" class="best-overlap-card" style="color:var(--muted)">Add more responses to see overlap.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend-bar">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--virtual)"></div>Virtual</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--inperson)"></div>In-person</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--both)"></div>Either</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--none);border:1px solid var(--border)"></div>Unavailable</div>
+      </div>
+    </div>
+
+    <div class="grid-wrap">
+      <div class="avail-grid" id="avail-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let event = null;
+let currentMode = 'virtual';
+let isDrawing = false;
+let drawValue = null;
+let highlightedResponder = null;
+let saveTimer = null;
+let pollInterval = null;
+
+// ── UTILS ──
+function uid() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i = 0; i < 7; i++) {
+    if(i === 3) s += '-';
+    s += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return s;
+}
+
+function hourLabel(h) {
+  if(h === 0) return '12 AM';
+  if(h < 12) return h + ' AM';
+  if(h === 12) return '12 PM';
+  return (h - 12) + ' PM';
+}
+
+function dateRange(from, to) {
+  const dates = [];
+  let d = new Date(from + 'T00:00:00');
+  const end = new Date(to + 'T00:00:00');
+  while(d <= end) { dates.push(new Date(d)); d.setDate(d.getDate() + 1); }
+  return dates;
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function showToast(msg, duration = 2400) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setSaving(msg) {
+  document.getElementById('saving-indicator').textContent = msg;
+}
+
+// ── STORAGE ──
+async function saveEventMeta(ev) {
+  try {
+    const { responses, ...meta } = ev;
+    await window.storage.set('event:' + ev.id, JSON.stringify(meta), true);
+  } catch(e) { console.error(e); }
+}
+
+async function loadEventMeta(id) {
+  try {
+    const r = await window.storage.get('event:' + id, true);
+    return r ? JSON.parse(r.value) : null;
+  } catch(e) { return null; }
+}
+
+async function saveResponses(eventId, responses) {
+  try {
+    await window.storage.set('responses:' + eventId, JSON.stringify(responses), true);
+  } catch(e) { console.error(e); }
+}
+
+async function loadResponses(eventId) {
+  try {
+    const r = await window.storage.get('responses:' + eventId, true);
+    return r ? JSON.parse(r.value) : {};
+  } catch(e) { return {}; }
+}
+
+// ── INIT ──
+function setupHourSelects() {
+  const s = document.getElementById('hour-start');
+  const e = document.getElementById('hour-end');
+  for(let h = 0; h < 24; h++) {
+    const o = document.createElement('option'); o.value = h; o.textContent = hourLabel(h);
+    s.appendChild(o);
+    e.appendChild(o.cloneNode(true));
+  }
+  s.value = 9; e.value = 18;
+}
+
+function showHome() {
+  clearInterval(pollInterval);
+  event = null;
+  document.getElementById('view-home').classList.add('active');
+  document.getElementById('view-event').classList.remove('active');
+}
+
+// ── CREATE ──
+async function createNewEvent() {
+  const name = document.getElementById('event-name').value.trim();
+  const from = document.getElementById('date-from').value;
+  const to   = document.getElementById('date-to').value;
+  const hs   = +document.getElementById('hour-start').value;
+  const he   = +document.getElementById('hour-end').value;
+
+  if(!name)  { showToast('⚠️ Please enter an event name'); return; }
+  if(!from || !to) { showToast('⚠️ Please pick dates'); return; }
+  if(hs >= he) { showToast('⚠️ Start hour must be before end hour'); return; }
+
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating…';
+
+  event = { id: uid(), name, from, to, hourStart: hs, hourEnd: he, responses: {} };
+  await saveEventMeta(event);
+
+  btn.disabled = false; btn.textContent = 'Create event →';
+  await enterEvent();
+}
+
+// ── JOIN ──
+async function joinEvent() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if(!code) { showToast('⚠️ Enter an event code'); return; }
+
+  showToast('🔍 Looking up event…', 1500);
+  const meta = await loadEventMeta(code);
+  if(!meta) { showToast('❌ Event not found. Check the code and try again.', 3500); return; }
+
+  const responses = await loadResponses(code);
+  event = { ...meta, responses };
+  await enterEvent();
+}
+
+async function enterEvent() {
+  document.getElementById('view-home').classList.remove('active');
+  document.getElementById('view-event').classList.add('active');
+
+  document.getElementById('ev-title').textContent = event.name;
+  const dates = dateRange(event.from, event.to);
+  document.getElementById('ev-meta').textContent =
+    formatDate(dates[0]) + ' – ' + formatDate(dates[dates.length - 1]) +
+    '  ·  ' + hourLabel(event.hourStart) + ' to ' + hourLabel(event.hourEnd);
+  document.getElementById('share-id').textContent = event.id;
+
+  // reset UI
+  switchTab('add');
+  document.getElementById('responder-name').value = '';
+  selectMode('virtual');
+
+  buildGrid();
+  renderHeatmap();
+  renderResponsesSidebar();
+  renderBestOverlap();
+  startPolling();
+}
+
+// ── COPY ──
+function copyCode() {
+  navigator.clipboard.writeText(event.id).catch(() => {});
+  showToast('✓ Code copied! Share it with your team.');
+}
+
+// ── POLLING ──
+function startPolling() {
+  clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    if(!event) { clearInterval(pollInterval); return; }
+    const fresh = await loadResponses(event.id);
+    if(JSON.stringify(fresh) !== JSON.stringify(event.responses)) {
+      event.responses = fresh;
+      renderHeatmap();
+      renderResponsesSidebar();
+      renderBestOverlap();
+    }
+  }, 8000);
+}
+
+async function refreshAll() {
+  const fresh = await loadResponses(event.id);
+  event.responses = fresh;
+  renderHeatmap();
+  renderResponsesSidebar();
+  renderBestOverlap();
+  showToast('✓ Refreshed');
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  document.getElementById('tab-add-btn').classList.toggle('active', tab === 'add');
+  document.getElementById('tab-view-btn').classList.toggle('active', tab === 'view');
+  document.getElementById('tab-add').style.display = tab === 'add' ? '' : 'none';
+  document.getElementById('tab-view').style.display = tab === 'view' ? '' : 'none';
+  if(tab === 'view') { highlightedResponder = null; renderHeatmap(); renderResponsesSidebar(); }
+}
+
+// ── MODE ──
+function selectMode(m) {
+  currentMode = m;
+  ['virtual', 'inperson', 'both'].forEach(x => {
+    document.getElementById('modeBtn-' + x).className = 'mode-btn' + (m === x ? ' active-' + x : '');
+  });
+}
+
+// ── GRID ──
+function buildGrid() {
+  const grid = document.getElementById('avail-grid');
+  grid.innerHTML = '';
+  const dates = dateRange(event.from, event.to);
+  const slots = [];
+  for(let h = event.hourStart; h < event.hourEnd; h++) {
+    slots.push({ h, half: 0 }); slots.push({ h, half: 1 });
+  }
+
+  // Header
+  const hdr = document.createElement('div'); hdr.className = 'grid-header';
+  hdr.appendChild(Object.assign(document.createElement('div'), { className: 'time-col-header' }));
+  dates.forEach(d => {
+    const dh = document.createElement('div'); dh.className = 'day-header';
+    dh.innerHTML = `<div class="day-name">${d.toLocaleDateString('en-US',{weekday:'short'})}</div><div class="day-num">${d.getDate()}</div>`;
+    hdr.appendChild(dh);
+  });
+  grid.appendChild(hdr);
+
+  // Body
+  const body = document.createElement('div'); body.className = 'grid-body';
+
+  const tc = document.createElement('div'); tc.className = 'time-col';
+  slots.forEach(({ h, half }) => {
+    const tl = document.createElement('div'); tl.className = 'time-label';
+    tl.textContent = half === 0 ? hourLabel(h) : '';
+    tc.appendChild(tl);
+  });
+  body.appendChild(tc);
+
+  dates.forEach(d => {
+    const dc = document.createElement('div'); dc.className = 'day-col';
+    slots.forEach(({ h, half }) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (half === 1 ? ' half-hour' : '');
+      cell.dataset.date = d.toISOString().slice(0, 10);
+      cell.dataset.slot = h + '-' + half;
+      cell.dataset.mode = 'none';
+      cell.appendChild(Object.assign(document.createElement('div'), { className: 'heat-layer' }));
+
+      cell.addEventListener('mousedown', e => {
+        if(e.button === 2) { e.preventDefault(); startErase(cell); return; }
+        e.preventDefault();
+        isDrawing = true;
+        drawValue = cell.dataset.mode === 'none' ? currentMode : 'none';
+        applyCell(cell);
+      });
+      cell.addEventListener('mouseover', () => {
+        if(isDrawing) applyCell(cell);
+        showCellTooltip(cell);
+      });
+      cell.addEventListener('mouseleave', hideTooltip);
+      cell.addEventListener('contextmenu', e => { e.preventDefault(); startErase(cell); });
+
+      dc.appendChild(cell);
+    });
+    body.appendChild(dc);
+  });
+  grid.appendChild(body);
+
+  document.addEventListener('mouseup', () => { isDrawing = false; drawValue = null; });
+}
+
+function startErase(cell) { isDrawing = true; drawValue = 'none'; applyCell(cell); }
+
+function applyCell(cell) {
+  const name = document.getElementById('responder-name').value.trim();
+  if(!name) { showToast('⚠️ Enter your name first'); isDrawing = false; return; }
+
+  if(!event.responses[name]) event.responses[name] = {};
+  const key = cell.dataset.date + '|' + cell.dataset.slot;
+
+  if(drawValue === 'none') {
+    delete event.responses[name][key];
+    cell.dataset.mode = 'none';
+  } else {
+    event.responses[name][key] = drawValue;
+    cell.dataset.mode = drawValue;
+  }
+  renderHeatmap();
+  scheduleSave();
+}
+
+// ── AUTO-SAVE (debounced) ──
+function scheduleSave() {
+  setSaving('Unsaved changes…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    setSaving('Saving…');
+    await saveResponses(event.id, event.responses);
+    setSaving('✓ Saved');
+    setTimeout(() => setSaving(''), 2000);
+  }, 1500);
+}
+
+// ── SUBMIT ──
+async function submitAvailability() {
+  const name = document.getElementById('responder-name').value.trim();
+  if(!name) { showToast('⚠️ Please enter your name'); return; }
+  const filled = event.responses[name] && Object.keys(event.responses[name]).length > 0;
+  if(!filled) { showToast('⚠️ Paint some availability on the calendar first'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving…';
+
+  clearTimeout(saveTimer);
+  await saveResponses(event.id, event.responses);
+
+  btn.disabled = false; btn.textContent = 'Save my availability';
+  setSaving('');
+  showToast('✓ Saved! Your availability is now visible to everyone.');
+  switchTab('view');
+}
+
+// ── HEATMAP ──
+function renderHeatmap() {
+  const names = Object.keys(event.responses);
+  const relevant = highlightedResponder ? [highlightedResponder] : names;
+  const myName = document.getElementById('responder-name').value.trim();
+
+  const cellCount = {};
+  relevant.forEach(n => {
+    Object.entries(event.responses[n]).forEach(([k, mode]) => {
+      if(!cellCount[k]) cellCount[k] = { virtual: 0, inperson: 0, total: 0 };
+      if(mode === 'virtual' || mode === 'both')  cellCount[k].virtual++;
+      if(mode === 'inperson' || mode === 'both') cellCount[k].inperson++;
+      cellCount[k].total++;
+    });
+  });
+
+  const maxPeople = highlightedResponder ? 1 : (names.length || 1);
+
+  document.querySelectorAll('.cell').forEach(cell => {
+    const key = cell.dataset.date + '|' + cell.dataset.slot;
+    const myMode = myName && event.responses[myName] ? event.responses[myName][key] || 'none' : 'none';
+    cell.dataset.mode = myMode;
+
+    const hl = cell.querySelector('.heat-layer');
+    const c = cellCount[key];
+    if(c && c.total > 0) {
+      const alpha = Math.min(c.total / maxPeople, 1) * 0.52;
+      if(c.virtual > 0 && c.inperson > 0) {
+        hl.style.background = `rgba(155,127,232,${alpha})`;
+      } else if(c.virtual > 0) {
+        hl.style.background = `rgba(91,156,246,${alpha})`;
+      } else {
+        hl.style.background = `rgba(82,201,143,${alpha})`;
+      }
+    } else {
+      hl.style.background = 'transparent';
+    }
+  });
+}
+
+// ── SIDEBAR ──
+function renderResponsesSidebar() {
+  const list = document.getElementById('respondents-list');
+  const names = Object.keys(event.responses);
+  if(names.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🌱</div>No responses yet</div>';
+    return;
+  }
+  list.innerHTML = '';
+  names.forEach(n => {
+    const r = event.responses[n];
+    const vCount = Object.values(r).filter(m => m === 'virtual' || m === 'both').length;
+    const pCount = Object.values(r).filter(m => m === 'inperson' || m === 'both').length;
+    const tag = document.createElement('div');
+    tag.className = 'respondent-tag' + (highlightedResponder === n ? ' highlighted' : '');
+    tag.innerHTML = `<div class="respondent-dot"></div><div class="r-name">${n}</div><div class="r-modes">💻${vCount} 🏢${pCount}</div>`;
+    tag.onclick = () => {
+      highlightedResponder = highlightedResponder === n ? null : n;
+      renderHeatmap(); renderResponsesSidebar();
+    };
+    list.appendChild(tag);
+  });
+}
+
+function renderBestOverlap() {
+  const el = document.getElementById('best-overlap');
+  const names = Object.keys(event.responses);
+  if(names.length < 2) {
+    el.innerHTML = '<span style="color:var(--muted)">Add more responses to see overlap.</span>'; return;
+  }
+
+  const cellCount = {};
+  names.forEach(n => {
+    Object.entries(event.responses[n]).forEach(([k, mode]) => {
+      if(!cellCount[k]) cellCount[k] = { virtual: new Set(), inperson: new Set() };
+      if(mode === 'virtual' || mode === 'both')  cellCount[k].virtual.add(n);
+      if(mode === 'inperson' || mode === 'both') cellCount[k].inperson.add(n);
+    });
+  });
+
+  let best = null, bestScore = 0;
+  Object.entries(cellCount).forEach(([k, v]) => {
+    const score = Math.max(v.virtual.size, v.inperson.size);
+    if(score > bestScore) { bestScore = score; best = { k, virtual: v.virtual, inperson: v.inperson }; }
+  });
+
+  if(!best) { el.innerHTML = '<span style="color:var(--muted)">No overlapping slots found.</span>'; return; }
+
+  const [dateStr, slotStr] = best.k.split('|');
+  const [h, half] = slotStr.split('-').map(Number);
+  const d = new Date(dateStr + 'T00:00:00');
+  el.innerHTML = `
+    <div style="color:var(--text);font-weight:600">${formatDate(d)}</div>
+    <div style="color:var(--muted);font-size:0.76rem;margin-bottom:0.5rem">${hourLabel(h)}${half ? ':30' : ''}</div>
+    💻 <strong>${best.virtual.size}/${names.length}</strong> virtual<br>
+    🏢 <strong>${best.inperson.size}/${names.length}</strong> in-person
+  `;
+}
+
+// ── TOOLTIP ──
+function showCellTooltip(cell) {
+  const tt = document.getElementById('tooltip');
+  const key = cell.dataset.date + '|' + cell.dataset.slot;
+  const available = [];
+  Object.keys(event.responses).forEach(n => {
+    const m = event.responses[n][key]; if(m) available.push({ n, m });
+  });
+
+  const [dateStr, slotStr] = key.split('|');
+  const [h, half] = slotStr.split('-').map(Number);
+  const d = new Date(dateStr + 'T00:00:00');
+
+  let html = `<div class="tt-time">${formatDate(d)} ${hourLabel(h)}${half ? ':30' : ''}</div>`;
+  if(available.length === 0) {
+    html += `<div style="color:var(--muted);font-size:0.76rem;margin-top:0.2rem">No one available</div>`;
+  } else {
+    const colors = { virtual: 'var(--virtual)', inperson: 'var(--inperson)', both: 'var(--both)' };
+    available.forEach(({ n, m }) => {
+      html += `<div class="tt-row"><div class="tt-dot" style="background:${colors[m]}"></div>${n}</div>`;
+    });
+  }
+  tt.innerHTML = html; tt.style.display = 'block';
+  document.addEventListener('mousemove', posTooltip);
+}
+
+function posTooltip(e) {
+  const tt = document.getElementById('tooltip');
+  tt.style.left = (e.clientX + 14) + 'px'; tt.style.top = (e.clientY - 10) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+  document.removeEventListener('mousemove', posTooltip);
+}
+
+// ── START ──
+setupHourSelects();
+const today = new Date();
+const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+document.getElementById('date-from').value = today.toISOString().slice(0, 10);
+document.getElementById('date-to').value = nextWeek.toISOString().slice(0, 10);
+</script>
+</body>
+</html>
